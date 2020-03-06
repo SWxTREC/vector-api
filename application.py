@@ -89,7 +89,6 @@ def generate_image():
     if not allowed_file(file.filename):
         abort(400, "Bad file extension, only '.wrl' filetypes are allowed")
 
-    print("GML:", file.filename)
     if file and allowed_file(file.filename):
         # Save the uploaded file to a temporary file and then pass
         # that on to the matlab image generation code
