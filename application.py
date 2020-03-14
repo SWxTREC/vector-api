@@ -38,7 +38,7 @@ def call_matlab(d):
                    d["speed"], composition["o"], composition["o2"],
                    composition["n2"], composition["he"], composition["h"],
                    ACCOM_MODEL_DICT[d["accommodationModel"]],
-                   d["energyAccommodation"], d["surfaceMass"], [[]], "",
+                   d["energyAccommodation"], d["surfaceMass"], matlab.double([]), "",
                    nargout=5)
 
     # Make a dict for json return
