@@ -1,6 +1,6 @@
 from tempfile import NamedTemporaryFile
 import pprint
-from flask import Flask, abort, jsonify, request, send_file
+from flask import Flask, abort, jsonify, request, send_file, make_response
 from flask_cors import CORS
 
 import matlab.engine
@@ -86,8 +86,13 @@ def generate_image():
 
     # Save the uploaded file to a temporary file and then pass
     # that on to the matlab image generation code
+    bufsize = 16384
     with NamedTemporaryFile() as f:
-        file.save(f)
+        data = file.read(bufsize)
+        while data:
+            f.write(data)
+            data = file.read(bufsize)
+        
         image_fname = call_matlab_image(f.name)
         return send_file(image_fname, mimetype='image/png')
 
