@@ -81,7 +81,7 @@ def generate_image():
     if not file:
         abort(411, f"file or wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
 
-    file_path = getattr(file, 'filename', default=None)
+    file_path = getattr(file, 'filename', None)
     if file_path and not allowed_file(file_path):
         abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
 
