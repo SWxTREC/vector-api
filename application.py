@@ -6,9 +6,9 @@ from flask_cors import CORS
 import matlab.engine
 eng = matlab.engine.start_matlab()
 # path on EB ec2
-# eng.cd('/opt/python/current/app/vector-code/CD_CODE')
+eng.cd('/opt/python/current/app/vector-code/CD_CODE')
 # Testing on local ec2
-eng.cd('/home/ec2-user/code/vector-api/vector-code/CD_CODE')
+# eng.cd('/home/ec2-user/code/vector-api/vector-code/CD_CODE')
 
 application = Flask(__name__)
 CORS(application)
