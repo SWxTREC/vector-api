@@ -81,8 +81,8 @@ def generate_image():
     if not file:
         abort(411, f"wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
 
-    if not allowed_file(file.filename):
-        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
+#    if not allowed_file(file.filename):
+#        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
 
     # Save the uploaded file to a temporary file and then pass
     # that on to the matlab image generation code
@@ -93,6 +93,18 @@ def generate_image():
 
     # If we made it here, there was an unknown error
     abort(400, "Unknown error handling the uploaded image")
+
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    '''General Exception Handler'''
+    error_description = getattr(error, 'description', str(error))
+    if error_description != str(error):
+        error_description += "\n" + str(error)
+
+    error_text = error_description + f"\n{pprint.pformat(('REQUEST', request.environ))}"
+
+    return make_response(error_text, 500)
 
 
 if __name__ == '__main__':
