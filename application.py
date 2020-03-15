@@ -95,7 +95,7 @@ def generate_image():
     abort(400, "Unknown error handling the uploaded image")
 
 
-@app.errorhandler(Exception)
+@application.errorhandler(Exception)
 def handle_error(error):
     '''General Exception Handler'''
     error_description = getattr(error, 'description', str(error))
