@@ -77,12 +77,13 @@ def allowed_file(filename):
 
 @application.route('/api/image', methods=['POST'])
 def generate_image():
-    file = request.environ.get('wsgi.input')
+    file = request.files.get('file') or request.environ.get('wsgi.input')
     if not file:
-        abort(411, f"wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
+        abort(411, f"file or wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
 
-#    if not allowed_file(file.filename):
-#        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
+    file_path = getattr(file, 'filename', default=None)
+    if file_path and not allowed_file(file_path):
+        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
 
     # Save the uploaded file to a temporary file and then pass
     # that on to the matlab image generation code
