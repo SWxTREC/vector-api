@@ -1,13 +1,14 @@
 from tempfile import NamedTemporaryFile
+import pprint
 from flask import Flask, abort, jsonify, request, send_file
 from flask_cors import CORS
 
 import matlab.engine
 eng = matlab.engine.start_matlab()
 # path on EB ec2
-eng.cd('/opt/python/current/app/vector-code/CD_CODE')
+# eng.cd('/opt/python/current/app/vector-code/CD_CODE')
 # Testing on local ec2
-# eng.cd('/home/ec2-user/vector-api/vector-code/CD_CODE')
+eng.cd('/home/ec2-user/code/vector-api/vector-code/CD_CODE')
 
 application = Flask(__name__)
 CORS(application)
@@ -15,6 +16,22 @@ CORS(application)
 application.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'wrl'}
 
+class LoggingMiddleware(object):
+    """
+    See https://stackoverflow.com/a/25467602
+    """
+    def __init__(self, app):
+        self._app = app
+
+    def __call__(self, environ, resp):
+        errorlog = environ['wsgi.errors']
+        pprint.pprint(('REQUEST', environ), stream=errorlog)
+
+        def log_response(status, headers, *args):
+            pprint.pprint(('RESPONSE', status, headers), stream=errorlog)
+            return resp(status, headers, *args)
+
+        return self._app(environ, log_response)
 
 def call_matlab(d):
     """Call the matlab main routine with the input dictionary `d`."""
@@ -78,11 +95,12 @@ def allowed_file(filename):
 @application.route('/api/image', methods=['POST'])
 def generate_image():
     # check if the post request has the file part
-    if 'file' not in request.values:
-        abort(400, f"No 'file' in the request.\nValues:\n{request.values}")
-    file = request.values['file']
+    file = request.values.get('file') or request.files.get('file') or request.json.get('file')
+    if not file:
+        abort(400, f"No 'file' in the request.")
+
     # if user does not select file, browser also
-    # submit an empty part without filename
+    # submitted an empty part without filename
     if file.filename == '':
         abort(400, "The filename  in the request was empty.")
 
@@ -102,4 +120,5 @@ def generate_image():
 
 
 if __name__ == '__main__':
+    application.wsgi_app = LoggingMiddleware(application.wsgi_app)
     application.run(debug=True)
