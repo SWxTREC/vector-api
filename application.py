@@ -77,10 +77,14 @@ def allowed_file(filename):
 
 @application.route('/api/image', methods=['POST'])
 def generate_image():
+    # the file collection is lost when requests go through the API Gateway http proxy
     file = request.files.get('file') or request.environ.get('wsgi.input')
     if not file:
         abort(411, f"file or wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
 
+    # get the file path if possible
+    # it works for local flask mode and for direct access to EB instance
+    # it doesn't work for API Gateway http proxy in front of EB instance
     file_path = getattr(file, 'filename', None)
     if file_path and not allowed_file(file_path):
         abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
@@ -89,6 +93,8 @@ def generate_image():
     # that on to the matlab image generation code
     bufsize = 16384
     with NamedTemporaryFile() as f:
+        # read the post data stream using a reasonable buffer size
+        # the save method isn't available on the wsgi.input data stream
         data = file.read(bufsize)
         while data:
             f.write(data)
