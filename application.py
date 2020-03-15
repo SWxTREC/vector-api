@@ -16,23 +16,6 @@ CORS(application)
 application.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'wrl'}
 
-class LoggingMiddleware(object):
-    """
-    See https://stackoverflow.com/a/25467602
-    """
-    def __init__(self, app):
-        self._app = app
-
-    def __call__(self, environ, resp):
-        errorlog = environ['wsgi.errors']
-        pprint.pprint(('REQUEST', environ), stream=errorlog)
-
-        def log_response(status, headers, *args):
-            pprint.pprint(('RESPONSE', status, headers), stream=errorlog)
-            return resp(status, headers, *args)
-
-        return self._app(environ, log_response)
-
 def call_matlab(d):
     """Call the matlab main routine with the input dictionary `d`."""
 
@@ -94,31 +77,27 @@ def allowed_file(filename):
 
 @application.route('/api/image', methods=['POST'])
 def generate_image():
-    # check if the post request has the file part
-    file = request.values.get('file') or request.files.get('file') or request.json.get('file')
-    if not file:
-        abort(400, f"No 'file' in the request.")
+    length = int(request.environ.get('CONTENT_LENGTH', '0'))
+    file_path = request.args.get('file')
+    if not file_path:
+        abort(411, f"'file' argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
+    
+    if not allowed_file(file_path):
+        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
 
-    # if user does not select file, browser also
-    # submitted an empty part without filename
-    if file.filename == '':
-        abort(400, "The filename  in the request was empty.")
-
-    if not allowed_file(file.filename):
-        abort(400, "Bad file extension, only '.wrl' filetypes are allowed")
-
-    if file and allowed_file(file.filename):
-        # Save the uploaded file to a temporary file and then pass
-        # that on to the matlab image generation code
-        with NamedTemporaryFile() as f:
-            file.save(f.name)
-            image_fname = call_matlab_image(f.name)
-            return send_file(image_fname, mimetype='image/png')
+    # Save the uploaded file to a temporary file and then pass
+    # that on to the matlab image generation code
+    with NamedTemporaryFile() as f:
+        contents = request.environ['wsgi.input'].read(length)
+        if len(contents) != length:
+            abort(500, f'Did not receive all of the file. Expected the file to be {length} bytes but received {len(contents)} bytes.')
+        f.write(contents)
+        image_fname = call_matlab_image(f.name)
+        return send_file(image_fname, mimetype='image/png')
 
     # If we made it here, there was an unknown error
     abort(400, "Unknown error handling the uploaded image")
 
 
 if __name__ == '__main__':
-    application.wsgi_app = LoggingMiddleware(application.wsgi_app)
     application.run(debug=True)
