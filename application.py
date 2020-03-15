@@ -78,9 +78,10 @@ def allowed_file(filename):
 @application.route('/api/image', methods=['POST'])
 def generate_image():
     length = int(request.environ.get('CONTENT_LENGTH', '0'))
-    file_path = request.args.get('file')
-    if not file_path:
+    file = request.files.get('file')
+    if not file:
         abort(411, f"'file' argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
+    file_path = file.filename
     
     if not allowed_file(file_path):
         abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
