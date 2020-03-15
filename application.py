@@ -78,9 +78,9 @@ def allowed_file(filename):
 @application.route('/api/image', methods=['POST'])
 def generate_image():
     # check if the post request has the file part
-    if 'file' not in request.files:
-        abort(400, "No 'file' in the request.")
-    file = request.files['file']
+    if 'file' not in request.values:
+        abort(400, f"No 'file' in the request.\nValues:\n{request.values}")
+    file = request.values['file']
     # if user does not select file, browser also
     # submit an empty part without filename
     if file.filename == '':
