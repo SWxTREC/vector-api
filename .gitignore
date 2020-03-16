@@ -1,6 +1,8 @@
 # Elastic Beanstalk
 .ebignore
 
+# Python
+__pycache__
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
