@@ -1,5 +1,6 @@
 from tempfile import NamedTemporaryFile
-from flask import Flask, abort, jsonify, request, send_file
+import pprint
+from flask import Flask, abort, jsonify, request, send_file, make_response
 from flask_cors import CORS
 
 import matlab.engine
@@ -7,14 +8,13 @@ eng = matlab.engine.start_matlab()
 # path on EB ec2
 eng.cd('/opt/python/current/app/vector-code/CD_CODE')
 # Testing on local ec2
-# eng.cd('/home/ec2-user/vector-api/vector-code/CD_CODE')
+# eng.cd('/home/ec2-user/code/vector-api/vector-code/CD_CODE')
 
 application = Flask(__name__)
 CORS(application)
 # Limit the content upload size to 16 MB
 application.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'wrl'}
-
 
 def call_matlab(d):
     """Call the matlab main routine with the input dictionary `d`."""
@@ -38,7 +38,7 @@ def call_matlab(d):
                    d["speed"], composition["o"], composition["o2"],
                    composition["n2"], composition["he"], composition["h"],
                    ACCOM_MODEL_DICT[d["accommodationModel"]],
-                   d["energyAccommodation"], d["surfaceMass"], [[]], "",
+                   d["energyAccommodation"], d["surfaceMass"], matlab.double([]), "",
                    nargout=5)
 
     # Make a dict for json return
@@ -77,28 +77,46 @@ def allowed_file(filename):
 
 @application.route('/api/image', methods=['POST'])
 def generate_image():
-    # check if the post request has the file part
-    if 'file' not in request.files:
-        abort(400, "No 'file' in the request.")
-    file = request.files['file']
-    # if user does not select file, browser also
-    # submit an empty part without filename
-    if file.filename == '':
-        abort(400, "The filename  in the request was empty.")
+    # the file collection is lost when requests go through the API Gateway http proxy
+    file = request.files.get('file') or request.environ.get('wsgi.input')
+    if not file:
+        abort(411, f"file or wsgi.input argument is required\n{pprint.pformat(('REQUEST', request.environ))}")
 
-    if not allowed_file(file.filename):
-        abort(400, "Bad file extension, only '.wrl' filetypes are allowed")
+    # get the file path if possible
+    # it works for local flask mode and for direct access to EB instance
+    # it doesn't work for API Gateway http proxy in front of EB instance
+    file_path = getattr(file, 'filename', None)
+    if file_path and not allowed_file(file_path):
+        abort(400, f"Bad file extension, only '.wrl' filetypes are allowed in '{file_path}'")
 
-    if file and allowed_file(file.filename):
-        # Save the uploaded file to a temporary file and then pass
-        # that on to the matlab image generation code
-        with NamedTemporaryFile() as f:
-            file.save(f.name)
-            image_fname = call_matlab_image(f.name)
-            return send_file(image_fname, mimetype='image/png')
+    # Save the uploaded file to a temporary file and then pass
+    # that on to the matlab image generation code
+    bufsize = 16384
+    with NamedTemporaryFile() as f:
+        # read the post data stream using a reasonable buffer size
+        # the save method isn't available on the wsgi.input data stream
+        data = file.read(bufsize)
+        while data:
+            f.write(data)
+            data = file.read(bufsize)
+        
+        image_fname = call_matlab_image(f.name)
+        return send_file(image_fname, mimetype='image/png')
 
     # If we made it here, there was an unknown error
     abort(400, "Unknown error handling the uploaded image")
+
+
+@application.errorhandler(Exception)
+def handle_error(error):
+    '''General Exception Handler'''
+    error_description = getattr(error, 'description', str(error))
+    if error_description != str(error):
+        error_description += "\n" + str(error)
+
+    error_text = error_description + f"\n{pprint.pformat(('REQUEST', request.environ))}"
+
+    return make_response(error_text, 500)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
 [submodule "vector-code"]
 	path = vector-code
 	url = https://github.com/SWxTREC/vector-code.git
+        update = merge
+

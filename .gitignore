@@ -1,7 +1,8 @@
 # Elastic Beanstalk
-venv_flask
 .ebignore
 
+# Python
+__pycache__
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
