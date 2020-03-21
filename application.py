@@ -169,7 +169,7 @@ def save_geometry():
     # Save the uploaded file to a temporary file and then pass
     # that on to the Matlab image generation code
     bufsize = 16384
-    with open(geom_file) as f:
+    with open(geom_file, 'wb') as f:
         # read the post data stream using a reasonable buffer size
         # the save method isn't available on the wsgi.input data stream
         data = file.read(bufsize)
