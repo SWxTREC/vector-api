@@ -65,16 +65,17 @@ def call_matlab(d):
 
     # Default empty geometry file
     geom_file = ""
+    obj_id = 0
     obj_type = d['objectType']
     if obj_type == 'sphere':
-        obj_id = float(1)
+        obj_id = 1
     elif obj_type == 'plate':
-        obj_id = float(2)
+        obj_id = 2
     elif obj_type == 'cylinder':
-        obj_id = float(3)
+        obj_id = 3
     elif obj_type == 'custom':
         # Handle the geometry file
-        obj_id = float(4)
+        obj_id = 4
         if d['user_id'] is None:
             abort(400, "Need a valid userId with a custom objectType.")
         # The geometry file is stored in the temporary directory
@@ -82,7 +83,7 @@ def call_matlab(d):
     else:
         abort(400, "Invalid objectType")
 
-    out = eng.MAIN(obj_type, d["diameter"], d["length"],
+    out = eng.MAIN(float(obj_id), d["diameter"], d["length"],
                    d["area"], d["pitch"], d["sideslip"], d["temperature"],
                    d["speed"], composition["o"], composition["o2"],
                    composition["n2"], composition["he"], composition["h"],
