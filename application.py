@@ -90,6 +90,8 @@ def call_matlab(d):
                    ACCOM_MODEL_DICT[d["accommodationModel"]],
                    d["energyAccommodation"], d["surfaceMass"], matlab.double([]), geom_file,
                    nargout=5)
+    # Clear the Matlab memory footprint of locally stored variables after each call.
+    eng.eval('clear all', nargout=0)
 
     # Make a dict for json return
     d_return = {"dragCoefficient": out[1],
