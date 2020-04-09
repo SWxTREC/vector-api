@@ -45,6 +45,8 @@ application = Flask(__name__)
 CORS(application)
 # Limit the content upload size to 16 MB
 application.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# Don't cache the file responses
+application.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 ALLOWED_EXTENSIONS = {'wrl'}
 
 
@@ -99,6 +101,12 @@ def call_matlab(d):
                 "forceCoefficient": out[3],
                 "energyAccommodation": out[4]}
     return d_return
+
+
+@application.after_request
+def set_response_headers(response):
+    response.cache_control.max_age = 0
+    return response
 
 
 @application.route('/api/singlepoint', methods=['POST'])
