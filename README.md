@@ -28,13 +28,15 @@ used in the computations.
   - `deployable3u`, a 3U CubeSat with solar panels
 
 - /singlepoint/:id : POST
-    Receives the JSON data from the frontend website and makes
+
+    This endpoint receives the JSON data from the frontend website and makes
     the call to Matlab to produce the output results. It returns
     a JSON dictionary of the calculated values. The `/geometry` endpoint
     must be called before this.
 
 - /image/:id : GET
-    Returns the image that was produced for the requested `id`.
+
+    This endpoint returns the image that was produced for the requested `id`.
     The `/singlepoint/:id` endpoint must be called before this.
 
 ## Inputs
