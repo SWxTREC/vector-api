@@ -1,0 +1,77 @@
+# Build a Matlab application from the Matlab runtime
+# https://www.mathworks.com/products/compiler/matlab-runtime.html
+# https://www.mathworks.com/help/compiler/mcr-path-settings-for-run-time-deployment.html
+# Options for what is needed at a minimum
+# https://www.mathworks.com/matlabcentral/answers/780072-slim-installation-of-matlab-runtime
+# Format of the file has changed with Matlab 2022+
+# https://www.mathworks.com/matlabcentral/answers/780037-matlab-runtime-installer_input-txt
+
+# 1) On a Linux box, build the Python Application (without the runtime included)
+# https://www.mathworks.com/help/compiler_sdk/gs/create-a-python-application-with-matlab-code.html
+#   1a) Call it "vector_main"
+# 2) Download the Matlab runtime (R2023a) used for now
+#    https://www.mathworks.com/products/compiler/matlab-runtime.html
+#    https://ssd.mathworks.com/supportfiles/downloads/R2023a/Release/1/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2023a_Update_1_glnxa64.zip
+# 3) Extract the runtime and put the folder in the extras/ location
+#    extras/ should have 3 items:
+#   a) MATLAB_Runtime_R2023a_Update_1_glnxa64/
+#   b) vectormain/
+#   c) matlab-install.txt
+FROM public.ecr.aws/lambda/python:3.9 as builder
+
+# Full runtime: ./install -mode silent -agreeToLicense yes
+# Limited size runtime: ./install -inputFile matlab-install.txt
+# Limited installation file contents (matlab-install.txt):
+# mode=silent
+# agreeToLicense=yes
+# product.MATLAB Runtime - Core
+# product.MATLAB Runtime - Graphics
+# product.MATLAB Runtime - Non Interactive MATLAB
+# product.MATLAB Runtime - Numerics
+# product.MATLAB Runtime - Python
+
+# Matlab needs these additional system files:
+RUN yum update -y \
+  && yum install wget unzip libXext libXt-devel libXmu pam-devel -y \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && mkdir /mcr-install \
+  && cd /mcr-install
+
+# Install the function's dependencies
+#  a) MATLAB_Runtime_R2023a_Update_1_glnxa64/ - Matlab runtime
+#  b) vector_main/ - Python compiled extension from Matlab (Run on a Linux box)
+#  c) matlab-install.txt - File describing the minimal install dependencies
+COPY extras/  /mcr-install/.
+
+# Extract the runtime, install it, remove all of the unnecessary original files
+# unzip MATLAB_Runtime_R2023a_Update_1_glnxa64.zip -d MATLAB_Runtime_R2023a_Update_1_glnxa64
+# We could `wget` the contents and unzip, but it is a large file and takes a lot of bandwidth
+# so we store it locally for now.
+RUN cd /mcr-install/MATLAB_Runtime_R2023a_Update_1_glnxa64 \
+  && ./install -inputFile /mcr-install/matlab-install.txt \
+# Install the vector_main package
+#  && unzip vector_main.zip \
+  && cd /mcr-install/vector_main/for_redistribution_files_only \
+  && python3 setup.py install \
+  # Needed for the app.py code to download images from s3
+  && pip install boto3 \
+  # Remove the COPY'd in files that we don't need because
+  # we installed them into the container /usr /var directories
+  && rm -rf /mcr-install
+
+FROM public.ecr.aws/lambda/python:3.9
+
+COPY --from=builder /var /var
+COPY --from=builder /usr /usr
+
+# Required library paths for the Matlab runtime
+ENV LD_LIBRARY_PATH=/usr/local/MATLAB/MATLAB_Runtime/R2023a/runtime/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/R2023a/bin/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/R2023a/sys/os/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/R2023a/extern/bin/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/R2023a/sys/opengl/lib/glnxa64
+ENV MCR_CACHE_VERBOSE=true
+ENV MCR_CACHE_ROOT=/tmp
+
+# Copy function code
+COPY app.py ${LAMBDA_TASK_ROOT}
+
+# Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
+CMD [ "app.vector_handler" ]

@@ -1,4 +1,4 @@
-# API Definition
+# Vector-API
 
 Version 0.1
 
@@ -8,6 +8,16 @@ followed by (2) a call to the `/singlepoint/:id` endpoint with the desired
 input parameters to compute all of the output values. Finally, (3) a call to the
 `/image/:id` endpoint will return an image of the satellite geometry that was
 used in the computations.
+
+## Docker build
+
+The code is run in the AWS Lambda serverless framework. To run the API code we
+install the Matlab runtime into a base Lambda runtime container.
+
+```bash
+cd dockerfiles
+docker build -t vector-app -f Dockerfile.lambda .
+```
 
 ## Endpoints
 
