@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vector_python"
+authors = [
+    {name = "Marcin Pilinski", email = "marcin.pilinski@lasp.colorado.edu"},
+    {name = "Greg Lucas", email = "greg.lucas@lasp.colorado.edu"},
+]
+description = "VECTOR coefficient of drag calculations for satellites"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["satellite", "drag"]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "boto3",
+    "matplotlib",
+    "numpy",
+    "scipy",
+]
+version = "0.1.0"
