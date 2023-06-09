@@ -1,5 +1,6 @@
+from math import erf
+
 import numpy as np
-from scipy.special import erf
 
 from vector_python.langmuirKmodel_v3 import langmuirKmodel_v3
 

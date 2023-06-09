@@ -1,5 +1,8 @@
+from math import erf
+
 import numpy as np
-from scipy.special import erf, i0, i1
+from scipy.special import i0, i1
+
 
 def sentman(alph, Ti, Tw, accom, epsil, V, m, shape, S):
     kb = 1.3806503e-23

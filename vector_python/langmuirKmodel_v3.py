@@ -1,5 +1,7 @@
+from math import erf
+
 import numpy as np
-from scipy.special import erf
+
 
 def langmuirKmodel_v3(params, x, Kf_1):
     J2eV = 6.24150974e18  # eV per Joule
