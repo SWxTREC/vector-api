@@ -1,6 +1,5 @@
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from vector_python.CD_sphere2 import CD_sphere2
@@ -72,6 +71,8 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
         tri_file = os.path.join(dir_path, 'TRIprops.txt')
         png_file = os.path.join(dir_path, 'geometry.png')
         geometry_wizard(fnamesurf, tri_file, 0, 1, ViewDir)
+        # delay import until needed when plotting the files
+        import matplotlib.pyplot as plt
         plt.gcf()
         plt.set_cmap('gray')
         plt.xticks([])
