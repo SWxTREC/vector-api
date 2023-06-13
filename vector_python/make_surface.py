@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def make_surface(filename, plt_flag, ViewDir):
@@ -50,6 +49,7 @@ def make_surface(filename, plt_flag, ViewDir):
 
 
     if plt_flag:
+        import matplotlib.pyplot as plt
         C = np.ones_like(pZ)
         fig = plt.gcf()
         ax = fig.add_subplot(111, projection='3d')
