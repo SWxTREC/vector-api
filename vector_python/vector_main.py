@@ -68,8 +68,10 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
     if obj_type == 4:  # geometry file
         ViewDir = [Phi, Theta]  # view direction
         dir_path = os.path.dirname(fnamesurf)
+        # Get the name minus the extension
+        fname = os.path.splitext(os.path.basename(fnamesurf))[0]
         tri_file = os.path.join(dir_path, 'TRIprops.txt')
-        png_file = os.path.join(dir_path, 'geometry.png')
+        png_file = os.path.join(dir_path, f'geometry-{fname}.png')
         geometry_wizard(fnamesurf, tri_file, 0, 1, ViewDir)
         # delay import until needed when plotting the files
         import matplotlib.pyplot as plt
