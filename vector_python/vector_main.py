@@ -110,13 +110,6 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
 
         # SURFACE MODEL (PLATE MODEL) GEOMETRY
         if obj_type == 4:
-            # TODO: Re-enable CD_triFile_effective
-            #       Right now we are just skipping over this because we don't
-            #       have the Matlab *.mex files translated yet.
-            CD[k] = np.nan
-            Aout[k] = np.nan
-            Fcoef[k] = np.nan
-            continue
             V_horz = V_rel[k] * np.cos(Phi * np.pi / 180)
             V_z = V_rel[k] * np.sin(Phi * np.pi / 180)
             V_x = V_horz * np.cos(Theta * np.pi / 180)

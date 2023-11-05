@@ -2,7 +2,14 @@ import numpy as np
 
 from vector_python.schamberg_plate2 import schamberg_plate2
 from vector_python.sentman import sentman
+from vector_python.surface_geometry2 import surface_geometry2
 
+
+def polygon_area(x, y):
+    # Using shoelace formula
+    correction = x[-1] * y[0] - y[-1]* x[0]
+    main_area = np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:])
+    return 0.5*np.abs(main_area + correction)
 
 def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff, Rcm, set_acqs):
     # given an arbitrary triangle file, computes the FMF drag of the entire
@@ -38,9 +45,7 @@ def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff
     # loop over triangles
     for k in range(ntri):
         N, Ct, A = getTRIprops(TRI[k, 0:9])  # triangle normal and center, and planform area
-        # XXX In the mex file?
-        # TODO: convert this function and polygon_area below?
-        PAM, _, _ = surfacegeometry_mx(TRI[k, 0:9], N, V / Vmag, 0)  # compute the projected area map of a single triangle
+        PAM, _, _ = surface_geometry2(TRI[k, 0:9], N, V / Vmag, 0, 0)  # compute the projected area map of a single triangle
         CENTROIDS[k, 0:3] = Ct + Rcm
         dir_flag = np.sign(np.dot(V, N))  # +1 facing away from flow, -1 facing into flow
         XP = [PAM[0, 0], PAM[0, 2], PAM[0, 4]]
