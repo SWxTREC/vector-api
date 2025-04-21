@@ -30,7 +30,7 @@ def schamberg_plate2(theta, nu, phi_o, Uinf, Tatm, m_gas, m_surface, Tw, htrhmFl
         accomm = np.abs(3.6 * mu * np.sin(theta) / ((1 + mu)**2))
 
     # rms thermal speed
-    c = np.sqrt(2 * kb * Tatm / m_gas)
+    c = np.sqrt(3 * kb * Tatm / m_gas)
 
     # inverse of the speed ratio (Schamberg's c/U)
     s = c / Uinf

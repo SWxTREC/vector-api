@@ -3,7 +3,9 @@ import numpy as np
 from vector_python.PLATEaeroCoeffs import PLATEaeroCoeffs
 
 
-def CD_triFile_effective(TRS, V_plate_in, NO_DENS, MASS_MAT, T_atm, T_w, accom, EPSILprops, NU, PHI_O, M_SURF, ff, Rcm, set_acqs):
+def CD_triFile_effective(TRS, V_plate_in, NO_DENS, MASS_MAT, T_atm, T_w, accom, EPSILprops, NU, PHI_O, M_SURF, ff, Rcm, set_acqs, htrhmFlag, material, GSI_model):
+    ntri = len(TRS)
+
     # constants
     mO = 2.6560178e-26  # atomic oxygen mass (~16 amu) [kg]
     mO2 = mO * 2
@@ -29,7 +31,7 @@ def CD_triFile_effective(TRS, V_plate_in, NO_DENS, MASS_MAT, T_atm, T_w, accom, 
         if NO_DENS[km] == 0:  # skip zero number densities
             continue
 
-        [CDXYZtot, CDtot, Atot, Ftot, TQtot] = PLATEaeroCoeffs(TRS, V_plate_in, NO_DENS[km], MASS_MAT[km], T_atm, T_w, accom, EPSILprops, NU, PHI_O, M_SURF, ff, Rcm, set_acqs)
+        [CDXYZtot, CDtot, Atot, Ftot, TQtot, alpha_out] = PLATEaeroCoeffs(TRS, V_plate_in, NO_DENS[km], MASS_MAT[km], T_atm, T_w, accom, EPSILprops, NU, PHI_O, M_SURF, ff, Rcm, set_acqs, material, GSI_model)
 
         # [CDqs,~,~] = schamberg_sphere(nu,phi_o*pi/180,Vt,Tatm,MASS_MAT(km),ms,Tw,0,set_acqs,accom);%<<<future capability
         CDpart[km] = CDtot
@@ -57,6 +59,6 @@ def CD_triFile_effective(TRS, V_plate_in, NO_DENS, MASS_MAT, T_atm, T_w, accom, 
     CL1 = 0
     CL2 = 0
 
-    COEFS = np.array([CL1, CDL, CL2, Atot, CXL, CYL, CZL, FXL, FYL, FZL, TQXL, TQYL, TQZL])  # placeholders for future
+    COEFS = np.array([CL1, CDL, CL2, Atot, CXL, CYL, CZL, FXL, FYL, FZL, TQXL, TQYL, TQZL, alpha_out])  # placeholders for future
 
     return COEFS

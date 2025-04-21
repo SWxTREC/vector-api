@@ -22,6 +22,7 @@ def CD_RB_ENGINEERING4(ro, mb, Ta, Vp, ms_amu, accom_mode, Xp, Eb, Kf, Ko):
     # CD             - drag coefficient
     # alpha          - accommodation coefficient
     # P_o            - partial atomic oxygen pressure
+    # Xp = 0.36; %pressure reduction factor for GRACE
 
     # constants
     mO = 2.6560178e-26  # atomic oxygen mass (~16 amu) [kg]

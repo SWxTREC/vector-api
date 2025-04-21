@@ -10,12 +10,17 @@ from vector_python.CD_RB_ENGINEERING4 import CD_RB_ENGINEERING4
 from vector_python.geometry_wizard import geometry_wizard
 
 
-def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_model, alpha, m_s, POSVEL, fnamesurf):
+def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, GSI_model, alpha, m_s, POSVEL, fnamesurf):
+# %GSI_model:  Method of energy accommodation coefficient computation and GSI model selection
+# %           -1:SESAM model, 0:set to constant value,  2: goodman model,
+# %	    3:CLL quasi-specular reflection with alpha_n = 0.75, sigma_t = 0.9,
+# %	    4:L1 extrapolated laboratory-derived GSI parameters
+
     # Constants
-    set_acqs = 0  # quasi-specular
-    ff = 0  # specular fraction
-    nu = 0  # quasi specular "bending" parameter
-    phi_o = 0  # quasi specular lobe width
+    set_acqs = 0  # quasi-specular, if set to 0, uses Goodman's clean surface alpha for the Schamberg Cd when ff > 0
+    ff = 0  # specular fraction, 0 = Sentman, 1 = Schamberg
+    nu = 0  # quasi specular "bending" parameter, 1 = specular Schamberg, infinity = diffuse Schamberg
+    phi_o = 0  # quasi specular lobe width %this should be input in degrees, 0 = specular Schamberg, 90 = diffuse Schamberg
     T_w = 300  # wall temperature
     mO = 2.6560178e-26  # atomic oxygen mass (~16 amu) [kg]
     mO2 = mO * 2
@@ -26,7 +31,12 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
     Eb = 5.7  # eV
     Kf = 3e4
     Ko = 5e6
+    material = "SiO2" # should be a string, i.e. 'SiO2', 'Teflon', 'aluminum', or 'FR4'
+
     Rcm = np.array([-0.01, 0.02, 0.01])  # position of center of mass from center of rectangular solid or sphere [m]
+    # hyperthermal flag
+    htrhmFlag = 0  # set to 0 means that the nonhyperthermal approximation is being used
+
     ppscl = 1.25  # plotting constants
     offsetx = -0.05
     offsety = -0.05
@@ -34,7 +44,8 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
     ppheight = 8.5 * ppscl
 
     # Input check
-    rpv, cpv = POSVEL.shape
+    # rpv, cpv = POSVEL.shape
+    rpv = 0
 
     # Multi point mode inputs
     if rpv > 0:
@@ -53,8 +64,8 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
     MASS_MAT = np.array([mN2 * np.ones(Npts), mO2 * np.ones(Npts), mO * np.ones(Npts), mHe * np.ones(Npts), mH * np.ones(Npts)]).T
     m_b = np.sum(MASS_MAT * NO_DENS, axis=1) / np.sum(NO_DENS, axis=1)
     ro = mO * NO_DENS[:, 2]
-    EA_set = EA_model
-    if EA_model == 0:
+    EA_set = GSI_model
+    if GSI_model == 0:
         EA_set = alpha
     EA_vec, P_o, THETAsrf = CD_RB_ENGINEERING4(ro, m_b, T_atm, V_rel, m_s, EA_set, 1.00, Eb, Kf, Ko)
     alpha_out = EA_vec
@@ -89,17 +100,20 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
     for k in range(Npts):
         # SPHERE
         if obj_type == 1:
-            COEFS = CD_sphere2(V_rel[k], NO_DENS[k, :], T_atm[k], T_w, EA_vec[k], 0, 1, 0, m_s, 0)
+            r = D / 2
+            COEFS = CD_sphere2(V_rel[k], NO_DENS[k, :], MASS_MAT[k, :], T_atm[k], T_w, EA_vec[k], m_s, set_acqs, htrhmFlag, r, material, GSI_model)
             CD[k] = COEFS[1]
             Aout[k] = np.pi * D ** 2 / 4
             Fcoef[k] = COEFS[1] * Aout[k]
+            alpha_out[k] = COEFS[3]
 
         # PLATE W/ ONE SIDE EXPOSED TO FLOW
         if obj_type == 2:
-            COEFS = CD_plate_effective(Phi * np.pi / 180, V_rel[k], NO_DENS[k, :], T_atm[k], T_w, EA_vec[k], 0, 1, 0, m_s, 0, A)
+            COEFS = CD_plate_effective(Phi * np.pi / 180, V_rel[k], NO_DENS[k, :], MASS_MAT[k, :], T_atm[k], T_w, EA_vec[k], 0, 1, 0, m_s, 0, A, material, GSI_model)
             CD[k] = COEFS[1]
             Aout[k] = COEFS[3]
             Fcoef[k] = COEFS[1] * Aout[k]
+            alpha_out[k] = COEFS[4]
 
         # CYLINDER
         if obj_type == 3:
@@ -119,10 +133,11 @@ def MAIN(obj_type, D, L, A, Phi, Theta, Ta, Va, n_O, n_O2, n_N2, n_He, n_H, EA_m
             EPSILprops = np.zeros(n_triangles)
             COEFS = CD_triFile_effective(TRS, V_plate_in, NO_DENS[k, :], MASS_MAT[k, :], T_atm[k], T_w, EA_vec[k],
                                          EPSILprops, np.full(n_triangles, nu), np.full(n_triangles, phi_o),
-                                         np.full(n_triangles, m_s), ff, Rcm.T, set_acqs)
+                                         np.full(n_triangles, m_s), ff, Rcm.T, set_acqs, htrhmFlag, material, GSI_model)
             CD[k] = COEFS[1]
             Aout[k] = COEFS[3]
             Fcoef[k] = COEFS[1] * Aout[k]
+            alpha_out[k] = COEFS[13]
 
     CD_status = 1
 

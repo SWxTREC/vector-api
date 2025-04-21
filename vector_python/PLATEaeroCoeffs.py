@@ -11,7 +11,7 @@ def polygon_area(x, y):
     main_area = np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:])
     return 0.5*np.abs(main_area + correction)
 
-def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff, Rcm, set_acqs):
+def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff, Rcm, set_acqs, material, GSI_model):
     # given an arbitrary triangle file, computes the FMF drag of the entire
     # surface, cross-sectional area, and total force, for a single species assumes
     # ff is the fraction of quasi specular component
@@ -39,6 +39,44 @@ def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff
     CDVEC = np.zeros(ntri)
     FXYZ = np.zeros((ntri, 3))
     CENTROIDS = np.zeros((ntri, 3))
+
+    cos_frac_vals = np.zeros(ntri)
+    accom_vals = np.zeros(ntri)
+    alpha_n_vals = np.zeros(ntri)
+    sigma_t_vals = np.zeros(ntri)
+
+    if material == 'SiO2':
+        # Range of SiO2 parameters
+        incident_angles_data = [180 - angle for angle in [30, 45, 60]]  # degrees
+        alpha_n_data = [0.98, 0.99, 0.98]
+        sigma_t_data = [0.49, 0.81, 0.83]
+        cos_frac_data = [0.97, 0.9, 0.79]
+        alpha_data = [0.71, 0.61, 0.44]
+
+    elif material == 'aluminum':
+        # Range of aluminum parameters
+        incident_angles_data = [180 - angle for angle in [30, 60]]  # degrees
+        alpha_n_data = [0.99, 0.98]
+        sigma_t_data = [0.59, 0.85]
+        cos_frac_data = [0.98, 0.88]
+        alpha_data = [0.72, 0.55]
+
+    elif material == 'Teflon':
+        # Range of Teflon parameters
+        incident_angles_data = [180 - angle for angle in [30, 45, 60]]  # degrees
+        alpha_n_data = [0.99, 0.99, 0.98]
+        sigma_t_data = [0.69, 0.81, 0.84]
+        cos_frac_data = [0.96, 0.87, 0.76]
+        alpha_data = [0.62, 0.50, 0.30]
+
+    elif material == 'FR4':
+        # Range of FR4 parameters
+        incident_angles_data = [180 - angle for angle in [30, 45, 60]]  # degrees
+        alpha_n_data = [0.99, 0.99, 0.98]
+        sigma_t_data = [0.59, 0.79, 0.85]
+        cos_frac_data = [0.97, 0.93, 0.85]
+        alpha_data = [0.68, 0.63, 0.52]
+
 
     # compute the cross-sectional (Across) and planform (Ascale) areas and the
     # angles of attack for each element
@@ -72,24 +110,67 @@ def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff
         alph = np.arccos(np.dot(V / Vmag, N / np.linalg.norm(N)))  # ?
         attk = -1 * dir_flag * np.arccos(np.dot(V / Vmag, a_vec))  # angle of attack
 
-        # the Maxwellian component
-        epsil = EPSIL[k]
-        CDm, _, CNm, CAm = sentman(alph, Ti, Tw, accom, epsil, Vmag, m, 'surfacespec', -1)
+        # Function to calculate dotted_VN
+        def calculate_dotted_VN(V, N):
+            Vmag = np.linalg.norm(V)
+            Nmag = np.linalg.norm(N)
+            dotted_VN = np.arccos(np.dot(V / Vmag, N / Nmag))
+            return dotted_VN
 
-        # the quasi-specular component (Schamberg)
-        CDqs = 0
-        CNqs = 0
-        CAqs = 0
-        if ff > 0:
-            # CDqs = schamberg_plate(pi/2-alph,nu,Vmag,Ti,m,m_surface(k))
-            CDqs, CNqs, CAqs = schamberg_plate2(attk, nu[k], phi_o[k] * np.pi / 180, Vmag, Ti, m,
-                                                 m_surface[k] * amu, Tw, 0, set_acqs, accom)
-            # schamberg_plate2(theta,nu,   phi_o,          Uinf,Tatm,m_gas,m_surface,        Tw,htrhmFlag,set_acqs,accomm)
+        dotted_VN = np.zeros(k)  # Initialize an array to store the results
 
-        # combined coefficients
-        CN = (1 - ff) * CNm + ff * CNqs
-        CA = (1 - ff) * CAm + ff * CAqs
-        CD = (1 - ff) * CDm + ff * CDqs
+        for i in range(k):
+            dotted_VN[i] = calculate_dotted_VN(V, N)
+
+        if GSI_model == 3:  # CLL quasi-specular reflection
+            alpha_n = 0.75
+            sigma_t = 0.9
+            alpha_t = sigma_t * (2 - sigma_t)
+            CDm, CLm, CNm, CAm = CLL_plate(alph, alpha_n, sigma_t, Vmag, Ti, m, Tw)
+            CN = CNm
+            CA = CAm
+            CD = CDm
+            alpha_out = (alpha_n + alpha_t) / 2
+
+        elif GSI_model == 4:  # Extrapolated laboratory-derived GSI parameters
+            cos_frac = np.interp(np.degrees(dotted_VN[k]), incident_angles_data, cos_frac_data, left=0, right=1)
+            accom = np.interp(np.degrees(dotted_VN[k]), incident_angles_data, alpha_data, left=0, right=1)
+            alpha_n = np.interp(np.degrees(dotted_VN[k]), incident_angles_data, alpha_n_data, left=0, right=1)
+            sigma_t = np.interp(np.degrees(dotted_VN[k]), incident_angles_data, sigma_t_data, left=0, right=1)
+
+            cos_frac = min(max(0, cos_frac), 1)
+            accom = min(max(0, accom), 1)
+            alpha_n = min(max(0, alpha_n), 1)
+            sigma_t = min(max(0, sigma_t), 1)
+
+            cos_frac_vals[k] = cos_frac
+            accom_vals[k] = accom
+            alpha_n_vals[k] = alpha_n
+            sigma_t_vals[k] = sigma_t
+
+            epsil = EPSIL(k)
+            CDm, _, CNm, CAm = sentman(alph, Ti, Tw, accom, epsil, Vmag, m, 'surfacespec', -1)
+            CDqs, CLqs, CNqs, CAqs = CLL_plate(alph, alpha_n, sigma_t, Vmag, Ti, m, Tw)
+            # Calculate combined coefficients
+            CN = (1 - cos_frac) * CNqs + cos_frac * CNm
+            CA = (1 - cos_frac) * CAqs + cos_frac * CAm
+            CD = (1 - cos_frac) * CDqs + cos_frac * CDm
+
+            # Calculate alpha values
+            alpha_cos = accom
+            alpha_t = sigma_t * (2 - sigma_t)
+            alpha_qs = (alpha_n + alpha_t) / 2
+            alpha_out = cos_frac * alpha_cos + (1 - cos_frac) * alpha_qs
+
+        else:  # Sentman diffuse with incomplete and/or variable energy accommodation
+            epsil = EPSIL[k]
+            CDm, _, CNm, CAm = sentman(alph, Ti, Tw, accom, epsil, Vmag, m, 'surfacespec', -1)
+            alpha_out = accom
+
+            # Set coefficients
+            CN = CNm
+            CA = CAm
+            CD = CDm
 
         # store coefficients
         CNVEC[k] = CN
@@ -122,7 +203,7 @@ def PLATEaeroCoeffs(TRI, V, n, m, Ti, Tw, accom, EPSIL, nu, phi_o, m_surface, ff
     # compute the total force
     Ftot = -0.5 * Atot * CDXYZtot * Vmag**2 * (n * m)
 
-    return CDXYZtot, CDtot, Atot, Ftot, TQtot
+    return CDXYZtot, CDtot, Atot, Ftot, TQtot, alpha_out
 
 
 def getTRIprops(TRI):

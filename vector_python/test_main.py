@@ -4,7 +4,7 @@ import vector_main
 
 
 data = {
-    "objectType": "cylinder",
+    "objectType": "plate",
     "diameter": 1.25,
     "length": 2.5,
     "area": 1.2,
@@ -22,7 +22,7 @@ data = {
     "surfaceMass": 5}
 
 # Default empty geometry file
-geom_file = ""
+geom_file = "/Users/grlu5547/code/vector-code/CD_CODE/deployable3u.wrl"
 obj_id = 0
 obj_type = data["objectType"]
 if obj_type == 'sphere':
