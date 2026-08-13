@@ -1,4 +1,4 @@
-from math import erf
+from scipy.special import erf
 
 import numpy as np
 
