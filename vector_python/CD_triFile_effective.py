@@ -33,6 +33,12 @@ def CD_triFile_effective(TRS, V_plate_in, NO_DENS, MASS_MAT, T_atm, T_w, accom, 
 
         [CDXYZtot, CDtot, Atot, Ftot, TQtot, alpha_out] = PLATEaeroCoeffs(TRS, V_plate_in, NO_DENS[km], MASS_MAT[km], T_atm, T_w, accom, EPSILprops, NU, PHI_O, M_SURF, ff, Rcm, set_acqs, material, GSI_model)
 
+        # PLATEaeroCoeffs returns CDXYZtot and Ftot as (3, 1) column vectors.
+        # Flatten them so the per-component assignments below extract scalars;
+        # NumPy 2 refuses to assign a size-1 array into a scalar array element.
+        CDXYZtot = np.ravel(CDXYZtot)
+        Ftot = np.ravel(Ftot)
+
         # [CDqs,~,~] = schamberg_sphere(nu,phi_o*pi/180,Vt,Tatm,MASS_MAT(km),ms,Tw,0,set_acqs,accom);%<<<future capability
         CDpart[km] = CDtot
         CXpart[km] = CDXYZtot[0]
